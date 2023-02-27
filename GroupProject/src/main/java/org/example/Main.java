@@ -6,56 +6,119 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        /*
-        I'm thinking we'll get how many columns to split it into from the user.
-
-        Checks should be in place that if the read data is only one line it basically just goes "no".
-         */
 
         String filePath = System.getProperty("user.dir") + File.separator + "src" + File.separator + "texts" + File.separator;
-        String[] fileContent = readFile(filePath + "file1.txt");
+        String[] fileContentArr = readFile("./src/inputTwo.txt"); //
+        ArrayList<String> fileContent = new ArrayList<>();
+        int columns = 1;
 
-        //   String[] fileContent = readFile(filePath + "file1.txt");
+        System.out.println("Input the number of columns to display.");
+        Scanner userInput = new Scanner(System.in);
+        String result;
+        String input;
+        boolean inputValid = false;
 
-        if (fileContent != null) {
-            //      splitList(fileContent, 5);
-            //        //Rest of logic here.
-            handleArray(fileContent, 2);
-        } else {
-            //         System.out.println("Something went wrong with the file processing.");
-        }
-    }
-
-    public static void handleArray(String[] content, int columns) {
-        System.out.println(content.length);
-
-
-        int columnCount = content.length / columns; // for 10 items and a column count of 5 this is 2.
-
-        System.out.println(columnCount);
-        int temp = 0;
-
-        ArrayList<Integer> positions = new ArrayList<>();
-
-
-        for (int i = 0; i < content.length; i++) {
-            // 0-1 2-3 4-5 6-7 8-9
-            if (temp < content.length) {
-                positions.add(temp);
-                temp += columnCount;
+        while (!inputValid) {
+            input = userInput.nextLine();
+            result = handleInput(input);
+            if (!result.isEmpty()) {
+                System.out.println(result);
+            } else {
+                columns = Integer.parseInt(input);
+                inputValid = true;
             }
         }
 
+        if (fileContentArr != null) {
+            fileContent.addAll(List.of(fileContentArr));
 
+            ArrayList<List<String>> columnText = splitContent(fileContent, columns);
+            printList(columnText, columns, fileContentArr.length);
+        } else {
+            System.out.println("Something went wrong with the file processing.");
+        }
 
-
-        System.out.println();
     }
 
+    public static void printList(ArrayList<List<String>> list, int columns, int contentSize) {
+        String line = "";
+
+        if (columns > 1) {
+            int size = list.get(1).size();
+            int index = 0;
+
+            try {
+                for (int i = 0; i < size; i++) {
+                    for (int j = 0; j < list.size(); j++) {
+                        if ((j < list.size() - 1)) {
+                            line += list.get(j).get(index) + "  |  ";
+                        } else {
+                            line += list.get(j).get(index);
+                        }
+                    }
+
+                    if (index < list.get(1).size()) {
+                        index++;
+                    } else {
+                        break;
+                    }
+
+                    System.out.println(line);
+                    line = "";
+                }
+            } catch (IndexOutOfBoundsException IOOBE) {
+                IOOBE.printStackTrace();
+            }
+            if (contentSize % columns == 1) {
+                System.out.println(list.get(0).get(list.get(0).size() - 1));
+            }
+        } else {
+            // This needs cleaning up. But I'm at the end of my rope.
+            System.out.println(Arrays.toString(list.toArray()).replace("[", "").replace(",", "\n"));
+        }
+    }
+
+    /*
+    Splits the list up into sublists based off of how many columns.
+
+     */
+    public static ArrayList<List<String>> splitContent(ArrayList<String> list, int columns) {
+        ArrayList<List<String>> columnText = new ArrayList<>();
+
+        int size = list.size();
+        int columnCount = size / columns;
+        int start = 0;
+        int end = columnCount;
+
+        if (size % columns == 0) { // the size of the list fits evenly into the columns.
+            for (int i = 0; i < columns; i++) {
+                columnText.add(list.subList(start, end));
+                start += columnCount;
+                end += columnCount;
+            }
+        } else { // the size of the list does not evenly fit into the columns.
+            columnCount += 1;
+            columnText.add(list.subList(0, columnCount));
+            start = columnCount;
+            end = start + columnCount;
+
+            for (int i = 1; i < columns - 1; i++) {
+                if (end < size) {
+                    columnText.add(list.subList(start, end - 1));
+                    start += columnCount;
+                    end += columnCount;
+                }
+
+            }
+
+            columnText.add(list.subList(size - (columnCount - 1), size));
+        }
+        return columnText;
+    }
 
     public static String[] readFile(String filePath) {
         File fileToRead = new File(filePath);
@@ -63,7 +126,12 @@ public class Main {
 
         try {
             String content = new String(Files.readAllBytes(fileToRead.toPath()));
-            contentArray = content.split("\r\n");
+            if (content.contains("\r\n")) {
+                contentArray = content.split("\r\n");
+            } else {
+                contentArray = content.split("\n");
+            }
+
 
             return contentArray;
         } catch (IOException IOE) {
@@ -72,80 +140,20 @@ public class Main {
         return null;
     }
 
+    public static String handleInput(String s) {
 
-    public static void splitList(String[] content, int columns) {
-
-        int columnSize = content.length / columns;
-        /*
-        If it is even (checked via modulo), then that is how many items per column we use.
-        If it is not, then the first column is the items per column plus one, and the rest are up to that size.
-         */
-
-        // For some godforsaken reason, it would only print the last item unless this nonsense was done.
-        List<String> trimmedContent = Arrays.stream(content).map(String::trim).collect(Collectors.toList());
-        if (columns == 1) {
-            System.out.println(Arrays.toString(trimmedContent.toArray()).replace("[", "").replace(",", "\n").replace("]", ""));
-            return; //We return here otherwise it breaks.
-        } else {
-            // Other logic goes here.
+        if (s.isEmpty() || s.isBlank()) {
+            return "That's an empty space. Not a number of columns.";
         }
-
-        String[][] splitWithColumns = new String[columns][columnSize + 1];
-        String[] item;
-        int x = 0;
-        for (int i = 0; i < trimmedContent.size(); i++) {
-            if (i % columnSize == 0) {
-                item = trimmedContent.subList(i, i + columnSize).toString().split(",");
-                for (int j = 0; j < item.length; j++) {
-                    splitWithColumns[x][j] = item[j];
-                }
-                x++;
+        try {
+            int num = Integer.parseInt(s);
+            if (num <= 0) {
+                return "Cannot have zero or less columns";
+            } else {
+                return "";
             }
+        } catch (NumberFormatException NFE) {
+            return "That's a string, not a number.";
         }
-
-
-        int length = splitWithColumns.length;
-
-        String line = "";
-        for (int i = 0; i < splitWithColumns.length; i++) {
-            for (int j = 0; j < columnSize; j++) {
-                line += splitWithColumns[i][j] + " | ";
-                System.out.println(line);
-            }
-            line = "";
-        }
-
-        //    System.out.println(Arrays.toString(splitWithColumns));
-
-        System.out.println();
-        // System.out.println(Arrays.stream(splitWithColumns).map(n -> splitWithColumns[n]);
-
-       /*
-        if(size % columns == 0){
-
-            // If it is modulo (even).
-            for(int i = 0; i < columnSize; i++){
-    //            line = trimmedContent.get(i);
-                line = trimmedContent.get(i + columns);
-
-         //       for(int j = 1; j < columns; j++){
-      //              line += "  |  " + trimmedContent.get(tmpInt);
-  //              }
-//
-                System.out.println(line);
-                line = "";
-                tmpInt++;
-            }
-        } else {
-            System.out.println("Not evenly split.");
-        }
-
-        */
     }
-
-    public static void verifyInput(String s) {
-
-    }
-
-
 }
